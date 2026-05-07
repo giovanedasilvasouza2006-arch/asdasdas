@@ -1,0 +1,28 @@
+{
+  "entities": {
+    "UserStat": {
+      "title": "User Statistics",
+      "description": "Tracks a user's studied verses.",
+      "type": "object",
+      "properties": {
+        "completedVerses": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of verse PKs that have been marked as studied."
+        },
+        "completedConfessions": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of confession chapter IDs that have been marked as studied."
+        }
+      },
+      "required": ["completedVerses", "completedConfessions"]
+    }
+  },
+  "firestore": {
+    "user_stats/{userId}": {
+      "schema": "UserStat",
+      "description": "User specific statistics and study progress."
+    }
+  }
+}
