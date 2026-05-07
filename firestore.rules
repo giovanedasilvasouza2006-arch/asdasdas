@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User Stats rules
+    match /user_stats/{userId} {
+      allow read: if isOwner(userId);
+      
+      allow create: if isOwner(userId) 
+        && isVerified()
+        && isValidUserStat(incoming())
+        && incoming().completedVerses.size() <= 1000
+        && incoming().completedConfessions.size() <= 33;
+      
+      allow update: if isOwner(userId)
+        && isVerified()
+        && isValidUserStat(incoming())
+        && (
+          (incoming().diff(existing()).affectedKeys().hasOnly(['completedVerses']) && incoming().completedVerses.size() <= 32000) ||
+          (incoming().diff(existing()).affectedKeys().hasOnly(['completedConfessions']) && incoming().completedConfessions.size() <= 33)
+        );
+    }
+
+    function isValidUserStat(data) {
+      return data.completedVerses is list
+        && (data.completedVerses.size() == 0 || data.completedVerses[0] is string)
+        && data.completedConfessions is list
+        && (data.completedConfessions.size() == 0 || data.completedConfessions[0] is string);
+    }
+  }
+}
